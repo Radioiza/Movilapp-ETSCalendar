@@ -94,6 +94,7 @@ class FiltrosBusquedaBar extends StatelessWidget {
     return DropdownButtonFormField<String?>(
       initialValue: filtros.carreraId,
       isExpanded: true,
+      menuMaxHeight: 360,
       decoration: const InputDecoration(
         labelText: 'Carrera',
         prefixIcon: Icon(Icons.school_rounded),
@@ -115,6 +116,7 @@ class FiltrosBusquedaBar extends StatelessWidget {
     return DropdownButtonFormField<int?>(
       initialValue: filtros.semestre,
       isExpanded: true,
+      menuMaxHeight: 360,
       decoration: const InputDecoration(
         labelText: 'Semestre',
         prefixIcon: Icon(Icons.format_list_numbered_rounded),

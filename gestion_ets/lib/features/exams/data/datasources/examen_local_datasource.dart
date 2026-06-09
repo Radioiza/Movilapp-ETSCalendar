@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../../../../core/constants/app_constants.dart';
@@ -65,6 +66,11 @@ class ExamenLocalDataSource {
       throw const CacheException('No fue posible filtrar la oferta de exámenes guardada');
     }
   }
+
+  /// Normaliza un texto para búsquedas tolerantes (minúsculas y sin acentos).
+  /// Expuesto para pruebas del buscador inteligente.
+  @visibleForTesting
+  String normalizarParaBusqueda(String texto) => _normalizar(texto);
 
   /// Normaliza un texto para búsquedas tolerantes: minúsculas y sin acentos.
   String _normalizar(String texto) {

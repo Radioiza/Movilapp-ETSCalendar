@@ -158,16 +158,15 @@ class BusquedaScreen extends ConsumerWidget {
   }
 
   Future<void> _exportarIcs(BuildContext context, List<Examen> examenes) async {
-    final int exitosos = await IcsExportService.exportarVarios(examenes);
-    if (!context.mounted) {
-      return;
+    try {
+      await IcsExportService.exportarComoArchivo(examenes);
+    } on Exception {
+      if (context.mounted) {
+        mostrarErrorEnSnackbar(
+          context,
+          const ServerFailure('No fue posible generar el archivo .ics'),
+        );
+      }
     }
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(SnackBar(
-        content: Text(exitosos > 0
-            ? 'Se agregaron $exitosos examen(es) a tu calendario (.ics)'
-            : 'No fue posible exportar al calendario'),
-      ));
   }
 }

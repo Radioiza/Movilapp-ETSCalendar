@@ -48,6 +48,9 @@ dependencies:
   pdf: ^3.11.1
   printing: ^5.13.4
   add_2_calendar: ^3.0.1
+  # Generación y compartición del archivo .ics (iCalendar) — puntos extra
+  share_plus: ^10.1.4
+  path_provider: ^2.1.5
 
   # Encriptación de contraseñas (login seguro)
   crypto: ^3.0.6

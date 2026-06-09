@@ -1,33 +1,99 @@
+import 'dart:io';
+
 import 'package:add_2_calendar/add_2_calendar.dart';
+import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../exams/domain/entities/examen.dart';
 
-/// Servicio de **exportación a formato .ics (iCalendar)** — los puntos
-/// extra del requerimiento "Exportación" del Módulo Público.
+/// Servicio de **exportación a formato .ics (iCalendar)** — los puntos extra
+/// del requerimiento "Exportación" del Módulo Público.
 ///
-/// Traduce cada [Examen] seleccionado a un evento de calendario estándar
-/// (RFC 5545) y delega en `add_2_calendar` su entrega a la app de
-/// calendario nativa del dispositivo (Google Calendar / Calendario de iOS),
-/// que internamente lo serializa como evento iCalendar.
+/// Ofrece dos vías:
+/// - [exportarComoArchivo]: genera un archivo **.ics** estándar (RFC 5545) con
+///   todos los exámenes y abre la hoja de compartir. No depende de que el
+///   dispositivo tenga una app de calendario; el archivo es importable en
+///   Google Calendar, Outlook, Apple Calendar, etc.
+/// - [agregarAlCalendario]: integración nativa con la app de calendario del
+///   dispositivo para un examen puntual (vía `add_2_calendar`).
 abstract final class IcsExportService {
   static const Duration _duracionExamen = Duration(hours: 2);
 
-  /// Agrega un único examen al calendario del dispositivo.
+  /// Genera un archivo `.ics` con [examenes] y lo comparte con el sistema.
+  static Future<void> exportarComoArchivo(List<Examen> examenes) async {
+    final String contenido = _construirIcs(examenes);
+    final Directory dir = await getTemporaryDirectory();
+    final File archivo = File('${dir.path}/calendario_ets.ics');
+    await archivo.writeAsString(contenido);
+
+    await Share.shareXFiles(
+      <XFile>[XFile(archivo.path, mimeType: 'text/calendar')],
+      subject: 'Calendario de ETS',
+      text: 'Calendario de Exámenes a Título de Suficiencia '
+          '(${examenes.length} examen(es))',
+    );
+  }
+
+  /// Agrega un único examen al calendario nativo del dispositivo.
   static Future<bool> agregarAlCalendario(Examen examen) {
     return Add2Calendar.addEvent2Cal(_eventoDesde(examen));
   }
 
-  /// Agrega cada examen del calendario seleccionado, uno a uno. Devuelve la
-  /// cantidad de eventos que se lograron entregar a la app de calendario.
-  static Future<int> exportarVarios(List<Examen> examenes) async {
-    int exitosos = 0;
+  /// Construye el documento iCalendar (RFC 5545) con un `VEVENT` por examen.
+  ///
+  /// Expuesto para pruebas: permite validar el contenido generado sin depender
+  /// de E/S de archivos ni de la hoja de compartir del sistema.
+  @visibleForTesting
+  static String construirIcs(List<Examen> examenes) => _construirIcs(examenes);
+
+  static String _construirIcs(List<Examen> examenes) {
+    final List<String> lineas = <String>[
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//ESCOM IPN//Gestion ETS//ES',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+    ];
+
+    final String sello = _fechaIcs(DateTime.now());
     for (final Examen examen in examenes) {
-      final bool agregado = await Add2Calendar.addEvent2Cal(_eventoDesde(examen));
-      if (agregado) {
-        exitosos++;
-      }
+      final DateTime fin = examen.fecha.add(_duracionExamen);
+      lineas.addAll(<String>[
+        'BEGIN:VEVENT',
+        'UID:${examen.id}@gestionets.escom.ipn.mx',
+        'DTSTAMP:$sello',
+        'DTSTART:${_fechaIcs(examen.fecha)}',
+        'DTEND:${_fechaIcs(fin)}',
+        'SUMMARY:${_escapar('ETS · ${examen.unidadAprendizaje}')}',
+        'LOCATION:${_escapar(examen.salonNombre)}',
+        'DESCRIPTION:${_escapar('Examen a Título de Suficiencia\n'
+            'Carrera: ${examen.carreraNombre} (${examen.semestre}.º semestre)\n'
+            'Turno: ${examen.turno.etiqueta}\n'
+            'Profesor evaluador: ${examen.profesorEvaluador}')}',
+        'END:VEVENT',
+      ]);
     }
-    return exitosos;
+
+    lineas.add('END:VCALENDAR');
+    // iCalendar exige terminaciones de línea CRLF.
+    return '${lineas.join('\r\n')}\r\n';
+  }
+
+  /// Fecha en formato UTC de iCalendar: `YYYYMMDDTHHMMSSZ`.
+  static String _fechaIcs(DateTime fecha) {
+    final DateTime u = fecha.toUtc();
+    String d(int n) => n.toString().padLeft(2, '0');
+    return '${u.year}${d(u.month)}${d(u.day)}T${d(u.hour)}${d(u.minute)}${d(u.second)}Z';
+  }
+
+  /// Escapa los caracteres especiales de los valores TEXT de iCalendar.
+  static String _escapar(String texto) {
+    return texto
+        .replaceAll('\\', '\\\\')
+        .replaceAll(';', '\\;')
+        .replaceAll(',', '\\,')
+        .replaceAll('\n', '\\n');
   }
 
   static Event _eventoDesde(Examen examen) {

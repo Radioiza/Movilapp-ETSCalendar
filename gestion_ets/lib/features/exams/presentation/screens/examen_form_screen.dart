@@ -110,6 +110,7 @@ class _ExamenFormScreenState extends ConsumerState<ExamenFormScreen> {
           DropdownButtonFormField<String>(
             initialValue: _carreraId,
             isExpanded: true,
+            menuMaxHeight: 360,
             decoration: const InputDecoration(labelText: 'Carrera', prefixIcon: Icon(Icons.school_rounded)),
             items: carreras
                 .map((Carrera c) => DropdownMenuItem<String>(
@@ -122,6 +123,7 @@ class _ExamenFormScreenState extends ConsumerState<ExamenFormScreen> {
           DropdownButtonFormField<int>(
             initialValue: _semestre,
             isExpanded: true,
+            menuMaxHeight: 360,
             decoration: const InputDecoration(
               labelText: 'Semestre',
               prefixIcon: Icon(Icons.format_list_numbered_rounded),
@@ -146,6 +148,7 @@ class _ExamenFormScreenState extends ConsumerState<ExamenFormScreen> {
           DropdownButtonFormField<String>(
             initialValue: _salonId,
             isExpanded: true,
+            menuMaxHeight: 360,
             decoration:
                 const InputDecoration(labelText: 'Salón', prefixIcon: Icon(Icons.meeting_room_rounded)),
             items: salones
