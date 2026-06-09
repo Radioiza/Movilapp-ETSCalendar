@@ -1,0 +1,79 @@
+name: gestion_ets
+description: "Sistema para la Gestión de ETS — ESCOM IPN. App offline-first para consultar y administrar el calendario de Exámenes a Título de Suficiencia."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Localización en español de los widgets nativos de Material
+  # (selectores de fecha/hora, diálogos, etc.) — paquete del SDK de Flutter,
+  # no añade dependencias externas.
+  flutter_localizations:
+    sdk: flutter
+
+  # UI
+  cupertino_icons: ^1.0.8
+
+  # Gestión de estado — Riverpod con sintaxis de anotaciones (@riverpod)
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # Persistencia local (offline-first) y favoritos
+  sqflite: ^2.4.1
+  path: ^1.9.0
+  shared_preferences: ^2.3.3
+
+  # Consumo de API REST
+  http: ^1.2.2
+
+  # Inyección de dependencias
+  get_it: ^8.0.3
+
+  # Notificaciones locales (recordatorio de fecha de examen)
+  flutter_local_notifications: ^18.0.1
+  timezone: ^0.9.4
+
+  # Interoperabilidad (geolocalización de salones / contacto con soporte)
+  url_launcher: ^6.3.1
+
+  # Formateo de fechas
+  intl: ^0.20.2
+
+  # Exportación de calendario
+  pdf: ^3.11.1
+  printing: ^5.13.4
+  add_2_calendar: ^3.0.1
+
+  # Encriptación de contraseñas (login seguro)
+  crypto: ^3.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Obligatorio: análisis estático sin warnings
+  flutter_lints: ^5.0.0
+
+  # Generación de código para Riverpod anotado
+  build_runner: ^2.4.13
+  riverpod_generator: ^2.6.3
+  riverpod_lint: ^2.6.3
+  custom_lint: ^0.7.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+
+  # fonts:
+  #   - family: Poppins
+  #     fonts:
+  #       - asset: assets/fonts/Poppins-Regular.ttf
+  #       - asset: assets/fonts/Poppins-Bold.ttf
+  #         weight: 700
