@@ -21,7 +21,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
   int _indiceSeleccionado = 0;
 
   static const List<_Destino> _destinos = <_Destino>[
-    _Destino('Dashboard', Icons.dashboard_outlined, Icons.dashboard_rounded, DashboardScreen()),
+    _Destino('Panel', Icons.dashboard_outlined, Icons.dashboard_rounded, DashboardScreen()),
     _Destino('Exámenes', Icons.event_note_outlined, Icons.event_note_rounded, ExamenesAdminScreen()),
     _Destino('Catálogos', Icons.folder_open_outlined, Icons.folder_rounded, CatalogosScreen()),
   ];

@@ -6,7 +6,7 @@ import '../features/admin_shell/presentation/screens/admin_panel_screen.dart';
 import '../features/auth/domain/entities/usuario.dart';
 import '../features/auth/presentation/providers/auth_provider.dart';
 import '../features/auth/presentation/screens/login_screen.dart';
-import '../features/exams/presentation/screens/busqueda_screen.dart';
+import '../features/home/presentation/screens/inicio_shell.dart';
 
 /// Nombres de ruta de la aplicación, centralizados para evitar literales
 /// dispersos por las pantallas.
@@ -39,7 +39,7 @@ abstract final class AppRouter {
       default:
         return MaterialPageRoute<void>(
           settings: configuracion,
-          builder: (_) => const BusquedaScreen(),
+          builder: (_) => const InicioShell(),
         );
     }
   }

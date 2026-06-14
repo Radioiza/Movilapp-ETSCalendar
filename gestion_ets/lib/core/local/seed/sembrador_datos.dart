@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../features/auth/data/datasources/auth_local_datasource.dart';
@@ -45,7 +46,7 @@ class SembradorDatos {
 
     await _catalogoLocal.reemplazarCarreras(DatosSemillaEscom.carreras);
     await _catalogoLocal.reemplazarSalones(DatosSemillaEscom.salones);
-    await _examenLocal.reemplazarTodo(_generarExamenes());
+    await _examenLocal.reemplazarTodo(generarExamenes());
     await _sembrarAdministradorLocal();
 
     await _prefs.setString(
@@ -67,64 +68,130 @@ class SembradorDatos {
     await _authLocal.respaldarCredencial(admin, AppConstants.adminDemoContrasena);
   }
 
-  /// Hora de inicio de cada turno. Los ETS duran **2 horas** (la duración la
-  /// aplica la exportación a calendario / .ics).
-  static const int _horaMatutino = 9; // 09:00 – 11:00
-  static const int _horaVespertino = 16; // 16:00 – 18:00
+  /// Horas de inicio disponibles para los ETS. Cada examen dura **2 horas** y
+  /// puede aplicarse en cualquier bloque entre las **7:00 y las 20:00**, con una
+  /// pausa al mediodía (13:00–14:00). Tener varios bloques por turno permite que
+  /// un mismo salón atienda varias materias el mismo día (en distintos bloques)
+  /// sin traslapes, de modo que toda la oferta cabe en la semana oficial de ETS.
+  static const List<int> _horasMatutino = <int>[7, 9, 11]; // 7-9, 9-11, 11-13
+  static const List<int> _horasVespertino = <int>[14, 16, 18]; // 14-16, 16-18, 18-20
 
-  /// Genera los exámenes ETS del periodo **6 al 10 de julio de 2026**
-  /// (lunes a viernes). Cada unidad de aprendizaje de cada plan de estudios se
-  /// ofrece en **ambos turnos** (matutino y vespertino) el mismo día.
-  List<ExamenModel> _generarExamenes() {
-    final List<ExamenModel> examenes = <ExamenModel>[];
-    final List<DateTime> dias = <DateTime>[
-      DateTime(2026, 7, 6),
-      DateTime(2026, 7, 7),
-      DateTime(2026, 7, 8),
-      DateTime(2026, 7, 9),
-      DateTime(2026, 7, 10),
-    ];
-    final List<SalonModel> salones = DatosSemillaEscom.salones;
-    final List<String> profesores = DatosSemillaEscom.profesores;
+  /// Semana oficial de ETS: 5 días hábiles desde el lunes 6 de julio de 2026
+  /// (lun 6 – vie 10). La oferta nunca se programa fuera de este rango.
+  static final DateTime _inicioEts = DateTime(2026, 7, 6);
+  static const int _diasEts = 5;
 
-    int materiaIndex = 0;
-    int slot = 0;
+  /// Genera los ETS de la semana oficial (lun 6 – vie 10 de julio de 2026),
+  /// asignando a cada materia el **laboratorio o aula que le corresponde según
+  /// su área** y **evitando traslapes**: en un mismo salón, día y hora no se
+  /// aplican dos exámenes. Cada materia se ofrece en ambos turnos (matutino y
+  /// vespertino) el mismo día y salón, en su bloque de 2 horas asignado.
+  ///
+  /// Es estática y pura (solo depende de [DatosSemillaEscom]) para poder
+  /// verificar en pruebas que la asignación de salones por área es correcta y
+  /// que no hay traslapes de horario.
+  @visibleForTesting
+  static List<ExamenModel> generarExamenes() {
+    // 1) Materias en orden determinista (con su índice en el semestre, que da
+    //    el id estable) y su área.
+    final List<_MateriaProgramada> items = <_MateriaProgramada>[];
     for (final CarreraModel carrera in DatosSemillaEscom.carreras) {
       final Map<int, List<String>> plan =
           DatosSemillaEscom.planesEstudio[carrera.id] ?? const <int, List<String>>{};
       final List<int> semestres = plan.keys.toList()..sort();
-
       for (final int semestre in semestres) {
         final List<String> materias = plan[semestre] ?? const <String>[];
         for (int i = 0; i < materias.length; i++) {
-          final String materia = materias[i];
-          final DateTime dia = dias[materiaIndex % dias.length];
-          final String profesor = DatosSemillaEscom.profesoresPorMateria[materia] ??
-              profesores[materiaIndex % profesores.length];
-
-          for (final Turno turno in Turno.values) {
-            final SalonModel salon = salones[slot % salones.length];
-            final int hora = turno == Turno.matutino ? _horaMatutino : _horaVespertino;
-            examenes.add(
-              ExamenModel(
-                id: '${carrera.id}-s$semestre-$i-${turno.name}',
-                unidadAprendizaje: materia,
-                carreraId: carrera.id,
-                carreraNombre: carrera.nombre,
-                semestre: semestre,
-                fecha: DateTime(dia.year, dia.month, dia.day, hora, 0),
-                turno: turno,
-                salonId: salon.id,
-                salonNombre: salon.nombreCompleto,
-                profesorEvaluador: profesor,
-              ),
-            );
-            slot++;
-          }
-          materiaIndex++;
+          items.add(_MateriaProgramada(
+            carrera: carrera,
+            semestre: semestre,
+            indiceEnSemestre: i,
+            materia: materias[i],
+            area: DatosSemillaEscom.areaDe(materias[i]),
+          ));
         }
+      }
+    }
+
+    // 2) La semana oficial de ETS son 5 días hábiles desde el 6 de julio.
+    final Map<AreaEts, List<SalonModel>> pools = DatosSemillaEscom.salonesPorArea;
+    final List<DateTime> fechas = _diasHabiles(_inicioEts, _diasEts);
+    final int bloquesPorTurno = _horasMatutino.length;
+
+    // 3) Asignación sin traslapes. A la j-ésima materia de un área se le da una
+    //    terna única (bloque, salón, día): bloque = j % bloques; y con
+    //    posición = j ~/ bloques se recorre primero el salón y luego el día.
+    //    Como cada (día, salón) ofrece `bloques` huecos y los bloques de un
+    //    turno están separados 2 h (y el vespertino empieza tras la comida),
+    //    dos materias del mismo salón y día caen en horas distintas y la misma
+    //    materia no se traslapa entre sus turnos. Las áreas usan salones
+    //    disjuntos, así que tampoco hay traslapes entre áreas.
+    final List<ExamenModel> examenes = <ExamenModel>[];
+    final Map<AreaEts, int> indiceArea = <AreaEts, int>{};
+    for (final _MateriaProgramada it in items) {
+      final List<SalonModel> pool = pools[it.area]!;
+      final int p = pool.length;
+      final int j = indiceArea[it.area] ?? 0;
+      indiceArea[it.area] = j + 1;
+
+      final int bloque = j % bloquesPorTurno;
+      final int posicion = j ~/ bloquesPorTurno;
+      final SalonModel salon = pool[posicion % p];
+      final int dia = (posicion ~/ p) % _diasEts;
+      final DateTime fecha = fechas[dia];
+      final String profesor = DatosSemillaEscom.profesoresPorMateria[it.materia] ??
+          DatosSemillaEscom.profesores[j % DatosSemillaEscom.profesores.length];
+
+      for (final Turno turno in Turno.values) {
+        final int hora =
+            turno == Turno.matutino ? _horasMatutino[bloque] : _horasVespertino[bloque];
+        examenes.add(
+          ExamenModel(
+            id: '${it.carrera.id}-s${it.semestre}-${it.indiceEnSemestre}-${turno.name}',
+            unidadAprendizaje: it.materia,
+            carreraId: it.carrera.id,
+            carreraNombre: it.carrera.nombre,
+            semestre: it.semestre,
+            fecha: DateTime(fecha.year, fecha.month, fecha.day, hora, 0),
+            turno: turno,
+            salonId: salon.id,
+            salonNombre: salon.nombreCompleto,
+            profesorEvaluador: profesor,
+          ),
+        );
       }
     }
     return examenes;
   }
+
+  /// Primeros [cantidad] días hábiles (lunes a viernes) desde [inicio].
+  static List<DateTime> _diasHabiles(DateTime inicio, int cantidad) {
+    final List<DateTime> dias = <DateTime>[];
+    DateTime cursor = inicio;
+    while (dias.length < cantidad) {
+      if (cursor.weekday <= DateTime.friday) {
+        dias.add(cursor);
+      }
+      cursor = cursor.add(const Duration(days: 1));
+    }
+    return dias;
+  }
+}
+
+/// Materia lista para programarse: conserva su origen (carrera/semestre/índice
+/// para el id) y el área que define su pool de salones.
+class _MateriaProgramada {
+  const _MateriaProgramada({
+    required this.carrera,
+    required this.semestre,
+    required this.indiceEnSemestre,
+    required this.materia,
+    required this.area,
+  });
+
+  final CarreraModel carrera;
+  final int semestre;
+  final int indiceEnSemestre;
+  final String materia;
+  final AreaEts area;
 }

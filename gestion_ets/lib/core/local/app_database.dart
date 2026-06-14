@@ -33,6 +33,13 @@ class AppDatabase {
       ruta,
       version: AppConstants.databaseVersion,
       onConfigure: (Database db) => db.execute('PRAGMA foreign_keys = ON'),
+      onUpgrade: (Database db, int versionAnterior, int versionNueva) async {
+        // Migración incremental: cada salto de versión añade lo que falte sin
+        // borrar la caché ya existente (carreras, salones, exámenes).
+        if (versionAnterior < 2) {
+          await _crearTablaEventosAgenda(db);
+        }
+      },
       onCreate: (Database db, int version) async {
         await db.execute('''
           CREATE TABLE ${AppConstants.tableCarreras} (
@@ -72,7 +79,30 @@ class AppDatabase {
         await db.execute(
           'CREATE INDEX idx_examenes_semestre ON ${AppConstants.tableExamenes} (semestre)',
         );
+
+        await _crearTablaEventosAgenda(db);
       },
+    );
+  }
+
+  /// Tabla del **calendario personal**: los ETS que el propio usuario captura
+  /// y visualiza dentro de la app (independientes de la oferta oficial).
+  /// Se define aparte para reutilizarla tanto en `onCreate` (instalación
+  /// nueva) como en `onUpgrade` (migración de la v1).
+  static Future<void> _crearTablaEventosAgenda(Database db) async {
+    await db.execute('''
+      CREATE TABLE ${AppConstants.tableEventosAgenda} (
+        id TEXT PRIMARY KEY,
+        titulo TEXT NOT NULL,
+        fecha TEXT NOT NULL,
+        salon TEXT NOT NULL DEFAULT '',
+        profesor TEXT NOT NULL DEFAULT '',
+        notas TEXT NOT NULL DEFAULT '',
+        recordatorio INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX idx_eventos_agenda_fecha ON ${AppConstants.tableEventosAgenda} (fecha)',
     );
   }
 

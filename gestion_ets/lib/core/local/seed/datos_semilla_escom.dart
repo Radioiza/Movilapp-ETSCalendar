@@ -1,6 +1,12 @@
 import '../../../features/catalogs/data/models/carrera_model.dart';
 import '../../../features/catalogs/data/models/salon_model.dart';
 
+/// Áreas de conocimiento que determinan en qué laboratorio/aula se aplica el
+/// ETS de cada materia. Cada área tiene su propio pool de salones, de modo que
+/// los exámenes caigan en el lugar correcto (laboratorios especializados o
+/// aulas generales) y sin traslapes.
+enum AreaEts { dsd, programacion, sistemas, redes, ia, general }
+
 /// Datos semilla reales de **ESCOM-IPN (Zacatenco)** usados por el modo
 /// *demo offline*: carreras, edificios/salones y los planes de estudio 2020
 /// completos (mapa curricular oficial) de las tres carreras de la escuela.
@@ -31,21 +37,218 @@ abstract final class DatosSemillaEscom {
     ),
   ];
 
-  /// Edificios y salones representativos de la ESCOM.
-  static const List<SalonModel> salones = <SalonModel>[
-    SalonModel(id: 's-1101', nombre: '1101', edificio: 'Edificio 1', direccionMapa: _mapaCampusEscom),
-    SalonModel(id: 's-1102', nombre: '1102', edificio: 'Edificio 1', direccionMapa: _mapaCampusEscom),
-    SalonModel(id: 's-1201', nombre: '1201', edificio: 'Edificio 1', direccionMapa: _mapaCampusEscom),
-    SalonModel(id: 's-2101', nombre: '2101', edificio: 'Edificio 2', direccionMapa: _mapaCampusEscom),
-    SalonModel(id: 's-2102', nombre: '2102', edificio: 'Edificio 2', direccionMapa: _mapaCampusEscom),
-    SalonModel(id: 's-2202', nombre: '2202', edificio: 'Edificio 2', direccionMapa: _mapaCampusEscom),
-    SalonModel(id: 's-3101', nombre: '3101', edificio: 'Edificio 3', direccionMapa: _mapaCampusEscom),
-    SalonModel(id: 's-3102', nombre: '3102', edificio: 'Edificio 3', direccionMapa: _mapaCampusEscom),
-    SalonModel(id: 's-lab1', nombre: 'Laboratorio de Cómputo 1', edificio: 'Laboratorios', direccionMapa: _mapaCampusEscom),
-    SalonModel(id: 's-lab2', nombre: 'Laboratorio de Cómputo 2', edificio: 'Laboratorios', direccionMapa: _mapaCampusEscom),
-    SalonModel(id: 's-labr', nombre: 'Laboratorio de Redes', edificio: 'Laboratorios', direccionMapa: _mapaCampusEscom),
-    SalonModel(id: 's-aud', nombre: 'Auditorio A', edificio: 'Unidad de Aprendizaje', direccionMapa: _mapaCampusEscom),
+  // --- Salones de la ESCOM ---
+  // Los laboratorios especializados tienen ubicación fija; el resto son aulas
+  // generales numeradas como `EdificioPisoSalón` (p. ej. 3212 = Edificio 3,
+  // piso 2, salón 12; la planta baja es piso 0).
+
+  static const SalonModel _labDsd1 = SalonModel(
+      id: 'lab-dsd-1', nombre: 'LAB DSD 1 · Salón 004', edificio: 'Edificio 3', direccionMapa: _mapaCampusEscom);
+  static const SalonModel _labDsd2 = SalonModel(
+      id: 'lab-dsd-2', nombre: 'LAB DSD 2 · Salón 004', edificio: 'Edificio 4', direccionMapa: _mapaCampusEscom);
+
+  static const List<SalonModel> _labsProgra = <SalonModel>[
+    SalonModel(id: 'lab-prog-1', nombre: 'LAB PROGRA 1 · Salón 105', edificio: 'Edificio 1', direccionMapa: _mapaCampusEscom),
+    SalonModel(id: 'lab-prog-2', nombre: 'LAB PROGRA 2 · Salón 106', edificio: 'Edificio 1', direccionMapa: _mapaCampusEscom),
+    SalonModel(id: 'lab-prog-3', nombre: 'LAB PROGRA 3 · Salón 107', edificio: 'Edificio 1', direccionMapa: _mapaCampusEscom),
+    SalonModel(id: 'lab-prog-4', nombre: 'LAB PROGRA 4 · Salón 108', edificio: 'Edificio 1', direccionMapa: _mapaCampusEscom),
   ];
+
+  static const List<SalonModel> _labsSistemas = <SalonModel>[
+    SalonModel(id: 'lab-sis-1', nombre: 'LAB de Sistemas 1 · Salón 102', edificio: 'Edificio 2', direccionMapa: _mapaCampusEscom),
+    SalonModel(id: 'lab-sis-2', nombre: 'LAB de Sistemas 2 · Salón 103', edificio: 'Edificio 2', direccionMapa: _mapaCampusEscom),
+    SalonModel(id: 'lab-sis-3', nombre: 'LAB de Sistemas 3 · Salón 104', edificio: 'Edificio 2', direccionMapa: _mapaCampusEscom),
+    SalonModel(id: 'lab-sis-4', nombre: 'LAB de Sistemas 4 · Salón 105', edificio: 'Edificio 2', direccionMapa: _mapaCampusEscom),
+    SalonModel(id: 'lab-sis-5', nombre: 'LAB de Sistemas 5 · Salón 106', edificio: 'Edificio 2', direccionMapa: _mapaCampusEscom),
+    SalonModel(id: 'lab-sis-6', nombre: 'LAB de Sistemas 6 · Salón 107', edificio: 'Edificio 2', direccionMapa: _mapaCampusEscom),
+  ];
+
+  static const SalonModel _labRedes = SalonModel(
+      id: 'lab-redes', nombre: 'LAB de Redes · Salón 104', edificio: 'Edificio 1', direccionMapa: _mapaCampusEscom);
+
+  static const SalonModel _labIa1 = SalonModel(
+      id: 'lab-ia-1', nombre: 'LAB de IA 1 · Salón 013', edificio: 'Edificio 3', direccionMapa: _mapaCampusEscom);
+  static const SalonModel _labIa2 = SalonModel(
+      id: 'lab-ia-2', nombre: 'LAB de IA 2 · Salón 013', edificio: 'Edificio 4', direccionMapa: _mapaCampusEscom);
+
+  /// Números de salón que ya ocupan los laboratorios (se excluyen de las aulas
+  /// generales para no usar dos veces el mismo espacio físico).
+  static const Set<int> _ocupadosPorLabs = <int>{
+    3004, 4004, 1105, 1106, 1107, 1108, 2102, 2103, 2104, 2105, 2106, 2107, 1104, 3013, 4013,
+  };
+
+  /// Aulas generales: Edificios 1–4, pisos PB/1/2, salones 02–13, excluyendo
+  /// los espacios de los laboratorios.
+  static final List<SalonModel> _aulasGenerales = _generarAulasGenerales();
+
+  static List<SalonModel> _generarAulasGenerales() {
+    final List<SalonModel> aulas = <SalonModel>[];
+    for (int edificio = 1; edificio <= 4; edificio++) {
+      for (int piso = 0; piso <= 2; piso++) {
+        for (int salon = 2; salon <= 13; salon++) {
+          final int numero = edificio * 1000 + piso * 100 + salon;
+          if (_ocupadosPorLabs.contains(numero)) {
+            continue;
+          }
+          // Código del salón DENTRO del edificio (piso + número), sin repetir
+          // el edificio: p. ej. piso 0 salón 5 -> "005", piso 2 salón 12 -> "212".
+          final String codigo = (piso * 100 + salon).toString().padLeft(3, '0');
+          aulas.add(SalonModel(
+            id: 's-$numero',
+            nombre: 'Salón $codigo',
+            edificio: 'Edificio $edificio',
+            direccionMapa: _mapaCampusEscom,
+          ));
+        }
+      }
+    }
+    return aulas;
+  }
+
+  /// Catálogo completo de salones (laboratorios + aulas generales).
+  static final List<SalonModel> salones = <SalonModel>[
+    _labDsd1, _labDsd2,
+    ..._labsProgra,
+    ..._labsSistemas,
+    _labRedes,
+    _labIa1, _labIa2,
+    ..._aulasGenerales,
+  ];
+
+  /// Pool de salones permitidos para los ETS de cada área.
+  static final Map<AreaEts, List<SalonModel>> salonesPorArea = <AreaEts, List<SalonModel>>{
+    AreaEts.dsd: <SalonModel>[_labDsd1, _labDsd2],
+    AreaEts.programacion: _labsProgra,
+    AreaEts.sistemas: _labsSistemas,
+    AreaEts.redes: <SalonModel>[_labRedes],
+    AreaEts.ia: <SalonModel>[_labIa1, _labIa2],
+    AreaEts.general: _aulasGenerales,
+  };
+
+  // --- Clasificación de cada unidad de aprendizaje por área ---
+
+  static const Set<String> _areaDsd = <String>{
+    'Fundamentos de Diseño Digital',
+    'Diseño de Sistemas Digitales',
+    'Arquitectura de Computadoras',
+    'Sistemas en Chip',
+  };
+  static const Set<String> _areaProgramacion = <String>{
+    'Fundamentos de Programación',
+    'Algoritmos y Estructuras de Datos',
+    'Análisis y Diseño de Algoritmos',
+    'Paradigmas de Programación',
+    'Programación para Ciencia de Datos',
+    'Compiladores',
+    'Teoría de la Computación',
+  };
+  static const Set<String> _areaSistemas = <String>{
+    'Bases de Datos',
+    'Bases de Datos Avanzadas',
+    'Sistemas Operativos',
+    'Tecnologías para el Desarrollo de Aplicaciones Web',
+    'Desarrollo de Aplicaciones Web',
+    'Desarrollo de Aplicaciones Móviles Nativas',
+    'Programación de Dispositivos Móviles',
+    'Ingeniería de Software',
+    'Ingeniería de Software para Sistemas Inteligentes',
+    'Análisis y Diseño de Sistemas',
+    'Desarrollo de Aplicaciones para Análisis de Datos',
+  };
+  static const Set<String> _areaRedes = <String>{
+    'Redes de Computadoras',
+    'Aplicaciones para Comunicaciones en Red',
+    'Administración de Servicios en Red',
+    'Sistemas Distribuidos',
+    'Cómputo en la Nube',
+    'Internet de las Cosas',
+  };
+  static const Set<String> _areaIa = <String>{
+    'Inteligencia Artificial',
+    'Fundamentos de Inteligencia Artificial',
+    'Aprendizaje de Máquina',
+    'Aprendizaje de Máquina e Inteligencia Artificial',
+    'Visión Artificial',
+    'Procesamiento Digital de Imágenes',
+    'Algoritmos Bioinspirados',
+    'Redes Neuronales y Aprendizaje Profundo',
+    'Sistemas Multiagentes',
+    'Reconocimiento de Voz',
+    'Tecnologías de Lenguaje Natural',
+    'Procesamiento de Lenguaje Natural',
+    'Minería de Datos',
+    'Modelado Predictivo',
+    'Temas Selectos de Aprendizaje Profundo',
+    'Temas Selectos de Inteligencia Artificial',
+  };
+
+  /// Determina el área (y por ende el pool de salones) de una materia. Las
+  /// materias listadas tienen prioridad; las no listadas (p. ej. optativas
+  /// nuevas) se clasifican por palabras clave y, si no encajan, van a aulas
+  /// generales.
+  static AreaEts areaDe(String materia) {
+    if (_areaDsd.contains(materia)) return AreaEts.dsd;
+    if (_areaProgramacion.contains(materia)) return AreaEts.programacion;
+    if (_areaSistemas.contains(materia)) return AreaEts.sistemas;
+    if (_areaRedes.contains(materia)) return AreaEts.redes;
+    if (_areaIa.contains(materia)) return AreaEts.ia;
+
+    final String n = _normalizar(materia);
+    if (n.contains('inteligencia artificial') ||
+        n.contains('aprendizaje') ||
+        n.contains('neuronal') ||
+        n.contains('vision artificial') ||
+        n.contains('lenguaje natural') ||
+        n.contains('reconocimiento de voz') ||
+        n.contains('bioinspirad')) {
+      return AreaEts.ia;
+    }
+    if (n.contains('redes de computadoras') ||
+        n.contains('comunicaciones en red') ||
+        n.contains('servicios en red') ||
+        n.contains('distribuid') ||
+        n.contains('en la nube')) {
+      return AreaEts.redes;
+    }
+    if (n.contains('base de datos') ||
+        n.contains('bases de datos') ||
+        n.contains('aplicaciones web') ||
+        n.contains('desarrollo de aplicaciones') ||
+        n.contains('aplicaciones moviles') ||
+        n.contains('dispositivos moviles') ||
+        n.contains('sistema operativo') ||
+        n.contains('sistemas operativos') ||
+        n.contains('ingenieria de software')) {
+      return AreaEts.sistemas;
+    }
+    if (n.contains('programacion') ||
+        n.contains('algoritmo') ||
+        n.contains('compilador') ||
+        n.contains('paradigma')) {
+      return AreaEts.programacion;
+    }
+    if (n.contains('diseno digital') ||
+        n.contains('sistemas digitales') ||
+        n.contains('arquitectura de computadora') ||
+        n.contains('chip')) {
+      return AreaEts.dsd;
+    }
+    return AreaEts.general;
+  }
+
+  /// Normaliza texto (minúsculas, sin acentos) para la clasificación por
+  /// palabras clave de [areaDe].
+  static String _normalizar(String texto) {
+    const Map<String, String> equivalencias = <String, String>{
+      'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ü': 'u', 'ñ': 'n',
+    };
+    final StringBuffer salida = StringBuffer();
+    for (final int unidad in texto.toLowerCase().runes) {
+      final String c = String.fromCharCode(unidad);
+      salida.write(equivalencias[c] ?? c);
+    }
+    return salida.toString();
+  }
 
   /// Profesor evaluador asignado a una **materia específica** (nombres reales
   /// de la planta docente de ESCOM, tomados del SAES). Tiene prioridad sobre
@@ -99,11 +302,9 @@ abstract final class DatosSemillaEscom {
     'Desarrollo de Aplicaciones Móviles Nativas': 'Rivera de la Rosa Mónica',
     'Introducción a la Criptografía': 'Cortez Duarte Nidia Asunción',
     'Internet de las Cosas': 'Lerma Magaña Carlos',
-    'Trabajo Terminal I': 'Aragón García Maribel',
     'Sistemas Distribuidos': 'Carreto Arellano Chadwick',
     'Administración de Servicios en Red': 'Martínez Rosales Ricardo',
     'Desarrollo de Habilidades Sociales para la Alta Dirección': 'Dorantes Cordero Martha Margarita',
-    'Trabajo Terminal II': 'Cordero López Martha Rosa',
     'Gestión Empresarial': 'Maldonado Muñoz Miguel Ángel',
     'Liderazgo Personal': 'Centeno Arrazola María Soledad',
 
@@ -229,14 +430,12 @@ abstract final class DatosSemillaEscom {
         'Desarrollo de Aplicaciones Móviles Nativas',
         'Introducción a la Criptografía',
         'Internet de las Cosas',
-        'Trabajo Terminal I',
         'Sistemas Distribuidos',
         'Administración de Servicios en Red',
       ],
       8: <String>[
         'Estancia Profesional',
         'Desarrollo de Habilidades Sociales para la Alta Dirección',
-        'Trabajo Terminal II',
         'Gestión Empresarial',
         'Liderazgo Personal',
       ],
@@ -291,14 +490,12 @@ abstract final class DatosSemillaEscom {
         'Sistemas Multiagentes',
       ],
       7: <String>[
-        'Trabajo Terminal I',
         'Reconocimiento de Voz',
         'Formulación y Evaluación de Proyectos Informáticos',
         'Interacción Humano-Máquina',
         'Programación de Dispositivos Móviles',
       ],
       8: <String>[
-        'Trabajo Terminal II',
         'Gestión Empresarial',
         'Estancia Profesional',
         'Desarrollo de Habilidades Sociales para la Alta Dirección',
@@ -354,7 +551,6 @@ abstract final class DatosSemillaEscom {
       7: <String>[
         'Big Data',
         'Modelos Econométricos',
-        'Trabajo Terminal I',
         'Administración de Proyectos de TI',
         'Temas Selectos de Aprendizaje Profundo',
         'Temas Selectos de Inteligencia Artificial',
@@ -362,7 +558,6 @@ abstract final class DatosSemillaEscom {
       8: <String>[
         'Desarrollo de Habilidades Sociales para la Alta Dirección',
         'Gestión Empresarial',
-        'Trabajo Terminal II',
         'Estancia Profesional',
       ],
     },

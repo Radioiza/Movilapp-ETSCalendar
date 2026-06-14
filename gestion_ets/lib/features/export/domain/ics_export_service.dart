@@ -12,7 +12,7 @@ import '../../exams/domain/entities/examen.dart';
 ///
 /// Ofrece dos vías:
 /// - [exportarComoArchivo]: genera un archivo **.ics** estándar (RFC 5545) con
-///   todos los exámenes y abre la hoja de compartir. No depende de que el
+///   los exámenes y abre la hoja de compartir. No depende de que el
 ///   dispositivo tenga una app de calendario; el archivo es importable en
 ///   Google Calendar, Outlook, Apple Calendar, etc.
 /// - [agregarAlCalendario]: integración nativa con la app de calendario del

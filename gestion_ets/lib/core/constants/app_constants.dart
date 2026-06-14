@@ -19,12 +19,14 @@ class AppConstants {
 
   // --- Base de datos local (sqflite) — caché offline-first ---
   static const String databaseName = 'gestion_ets.db';
-  static const int databaseVersion = 1;
+  // v2: agrega la tabla `eventos_agenda` (calendario personal del usuario).
+  static const int databaseVersion = 2;
 
   static const String tableExamenes = 'examenes';
   static const String tableCarreras = 'carreras';
   static const String tableSalones = 'salones';
   static const String tableFavoritos = 'favoritos';
+  static const String tableEventosAgenda = 'eventos_agenda';
 
   // --- Shared Preferences — llaves ---
   static const String prefSesionUsuario = 'sesion_usuario';
@@ -35,7 +37,7 @@ class AppConstants {
   // Al cambiar la versión se vuelve a sembrar la base local con los datos de
   // ESCOM (planes de estudio 2020). Credenciales del administrador local para
   // demostrar el Módulo Administrativo sin backend.
-  static const String versionSemilla = 'escom-2020-v6';
+  static const String versionSemilla = 'escom-2020-v10';
   static const String adminDemoUsuario = 'admin';
   static const String adminDemoContrasena = 'admin123';
 

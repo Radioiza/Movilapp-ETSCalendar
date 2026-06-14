@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/error/failures.dart';
 import '../../../../core/widgets/error_view.dart';
+import '../../../../core/widgets/marca_ipn.dart';
 import '../../domain/entities/usuario.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/login_form.dart';
@@ -41,33 +42,25 @@ class LoginScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                Icon(
-                  Icons.shield_outlined,
-                  size: 64,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
                 const SizedBox(height: 16),
-                Text(
-                  'Sistema para la Gestión de ETS',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineSmall,
+                const EncabezadoMarca(
+                  titulo: 'Gestión de ETS',
+                  subtitulo: 'Inicia sesión para administrar los exámenes y los catálogos.',
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Inicia sesión para administrar la oferta de exámenes, '
-                  'el dashboard y los catálogos.',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 32),
-                LoginForm(
-                  cargando: sesion.isLoading,
-                  onEnviar: (String usuario, String contrasena) {
-                    ref.read(sesionAuthProvider.notifier).iniciarSesion(
-                          nombreUsuario: usuario,
-                          contrasena: contrasena,
-                        );
-                  },
+                const SizedBox(height: 28),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: LoginForm(
+                      cargando: sesion.isLoading,
+                      onEnviar: (String usuario, String contrasena) {
+                        ref.read(sesionAuthProvider.notifier).iniciarSesion(
+                              nombreUsuario: usuario,
+                              contrasena: contrasena,
+                            );
+                      },
+                    ),
+                  ),
                 ),
               ],
             ),

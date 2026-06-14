@@ -39,9 +39,14 @@ class FiltrosBusquedaBar extends StatelessWidget {
           children: <Widget>[
             Row(
               children: <Widget>[
-                Icon(Icons.tune_rounded, color: Theme.of(context).colorScheme.primary),
+                Icon(Icons.search_rounded, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 8),
-                Text('Buscador inteligente', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  'Buscar',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
                 const Spacer(),
                 if (!filtros.estaVacio)
                   TextButton.icon(
@@ -54,7 +59,8 @@ class FiltrosBusquedaBar extends StatelessWidget {
             const SizedBox(height: 12),
             TextField(
               decoration: const InputDecoration(
-                labelText: 'Unidad de Aprendizaje (Materia)',
+                labelText: 'Materia o palabra clave',
+                hintText: 'Ej. Cálculo, Bases de Datos…',
                 prefixIcon: Icon(Icons.menu_book_rounded),
               ),
               onChanged: onUnidadCambiada,

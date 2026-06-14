@@ -4,30 +4,65 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/error/failures.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/loading_view.dart';
+import '../../../../core/widgets/marca_ipn.dart';
 import '../../../catalogs/domain/entities/carrera.dart';
 import '../../../catalogs/presentation/providers/catalogo_provider.dart';
 import '../../../export/domain/ics_export_service.dart';
 import '../../../export/domain/pdf_export_service.dart';
-import '../../../favorites/presentation/providers/favoritos_provider.dart';
 import '../../domain/entities/examen.dart';
 import '../../domain/repositories/examen_repository.dart';
 import '../providers/examen_search_provider.dart';
 import '../widgets/filtros_busqueda_bar.dart';
-import '../widgets/tabla_resultados_examenes.dart';
+import '../widgets/lista_resultados_examenes.dart';
 import 'examen_detalle_screen.dart';
 
-/// Pantalla principal del **Módulo Público (Consulta)**: Buscador
-/// Inteligente + Visualización Dinámica + Exportación del calendario.
-class BusquedaScreen extends ConsumerWidget {
+/// Pantalla principal de **consulta**: buscar exámenes, ver el resultado y
+/// exportar el calendario (PDF / .ics).
+class BusquedaScreen extends ConsumerStatefulWidget {
   const BusquedaScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BusquedaScreen> createState() => _BusquedaScreenState();
+}
+
+class _BusquedaScreenState extends ConsumerState<BusquedaScreen> {
+  final ScrollController _scroll = ScrollController();
+  bool _mostrarBotonArriba = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(_alScrollear);
+  }
+
+  @override
+  void dispose() {
+    _scroll.removeListener(_alScrollear);
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _alScrollear() {
+    final bool mostrar = _scroll.hasClients && _scroll.offset > 400;
+    if (mostrar != _mostrarBotonArriba) {
+      setState(() => _mostrarBotonArriba = mostrar);
+    }
+  }
+
+  void _volverArriba() {
+    _scroll.animateTo(
+      0,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final FiltrosExamen filtros = ref.watch(filtrosBusquedaProvider);
     final FiltrosBusqueda notificadorFiltros = ref.read(filtrosBusquedaProvider.notifier);
     final AsyncValue<List<Examen>> resultados = ref.watch(resultadosBusquedaProvider);
     final AsyncValue<List<Carrera>> carrerasAsync = ref.watch(carrerasCatalogoProvider);
-    final AsyncValue<Set<String>> favoritos = ref.watch(favoritosExamenesProvider);
 
     ref.listen<AsyncValue<List<Examen>>>(resultadosBusquedaProvider, (
       AsyncValue<List<Examen>>? anterior,
@@ -41,18 +76,50 @@ class BusquedaScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Calendario de ETS'),
+        titleSpacing: 16,
+        title: Row(
+          children: <Widget>[
+            const MarcaIpn(tamano: 30),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                const Text('Gestión de ETS'),
+                Text(
+                  'IPN · ESCOM',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.6,
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
         actions: <Widget>[
           IconButton(
             tooltip: 'Acceso administrativo',
             icon: const Icon(Icons.admin_panel_settings_outlined),
             onPressed: () => Navigator.of(context).pushNamed('/admin'),
           ),
+          const SizedBox(width: 4),
         ],
       ),
+      floatingActionButton: _mostrarBotonArriba
+          ? FloatingActionButton.small(
+              tooltip: 'Volver arriba',
+              onPressed: _volverArriba,
+              child: const Icon(Icons.arrow_upward_rounded),
+            )
+          : null,
       body: RefreshIndicator(
         onRefresh: () => ref.read(resultadosBusquedaProvider.notifier).actualizar(),
         child: ListView(
+          controller: _scroll,
+          padding: const EdgeInsets.only(bottom: 24),
           children: <Widget>[
             FiltrosBusquedaBar(
               filtros: filtros,
@@ -62,9 +129,8 @@ class BusquedaScreen extends ConsumerWidget {
               onUnidadCambiada: notificadorFiltros.escribirUnidadAprendizaje,
               onLimpiar: notificadorFiltros.limpiar,
             ),
-            const SizedBox(height: 8),
-            _seccionResultados(context, ref, resultados, favoritos),
-            const SizedBox(height: 24),
+            const SizedBox(height: 4),
+            _seccionResultados(context, ref, resultados),
           ],
         ),
       ),
@@ -75,7 +141,6 @@ class BusquedaScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     AsyncValue<List<Examen>> resultados,
-    AsyncValue<Set<String>> favoritos,
   ) {
     return resultados.when(
       loading: () => const Padding(
@@ -91,34 +156,27 @@ class BusquedaScreen extends ConsumerWidget {
       ),
       data: (List<Examen> examenes) {
         if (examenes.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 48),
-            child: Center(
-              child: Text('No se encontraron exámenes con esos criterios de búsqueda'),
-            ),
-          );
+          return _estadoVacio(context);
         }
         return Column(
           children: <Widget>[
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               child: Row(
                 children: <Widget>[
                   Text(
-                    '${examenes.length} resultado(s)',
-                    style: Theme.of(context).textTheme.titleSmall,
+                    examenes.length == 1 ? '1 examen' : '${examenes.length} exámenes',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                   ),
                   const Spacer(),
                   _botonesExportacion(context, examenes),
                 ],
               ),
             ),
-            const SizedBox(height: 8),
-            TablaResultadosExamenes(
+            ListaResultadosExamenes(
               examenes: examenes,
-              favoritos: favoritos.valueOrNull ?? const <String>{},
-              onAlternarFavorito: (Examen examen) =>
-                  ref.read(favoritosExamenesProvider.notifier).alternar(examen.id),
               onAbrirDetalle: (Examen examen) => Navigator.of(context).push(
                 MaterialPageRoute<void>(builder: (_) => ExamenDetalleScreen(examenId: examen.id)),
               ),
@@ -129,17 +187,44 @@ class BusquedaScreen extends ConsumerWidget {
     );
   }
 
+  Widget _estadoVacio(BuildContext context) {
+    final ColorScheme esquema = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 56, horizontal: 24),
+      child: Center(
+        child: Column(
+          children: <Widget>[
+            Icon(Icons.search_off_rounded, size: 56, color: esquema.outline),
+            const SizedBox(height: 14),
+            Text(
+              'Sin coincidencias',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Prueba con otra materia, carrera o semestre.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: esquema.onSurfaceVariant,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _botonesExportacion(BuildContext context, List<Examen> examenes) {
     return Wrap(
-      spacing: 4,
+      spacing: 6,
       children: <Widget>[
         IconButton.filledTonal(
-          tooltip: 'Exportar a PDF',
+          tooltip: 'Descargar en PDF',
           icon: const Icon(Icons.picture_as_pdf_outlined),
           onPressed: () => _exportarPdf(context, examenes),
         ),
         IconButton.filledTonal(
-          tooltip: 'Exportar a calendario (.ics)',
+          tooltip: 'Compartir calendario (.ics)',
           icon: const Icon(Icons.event_available_outlined),
           onPressed: () => _exportarIcs(context, examenes),
         ),

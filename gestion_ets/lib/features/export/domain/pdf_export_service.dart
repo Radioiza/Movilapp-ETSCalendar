@@ -8,11 +8,14 @@ import '../../exams/domain/entities/examen.dart';
 /// Servicio de **exportación a PDF** del calendario de exámenes
 /// seleccionado (requerimiento "Exportación" del Módulo Público).
 ///
-/// Genera un documento con la misma información que la tabla de resultados
-/// (Materia, Fecha, Turno, Salón, Profesor evaluador) y delega en
-/// `printing` la vista previa / impresión / guardado, que en cada
-/// plataforma ofrece además la opción nativa de "Compartir".
+/// Genera una "tira de materias" con la información de cada ETS (Materia,
+/// Fecha, Turno, Salón, Profesor evaluador) y delega en `printing` la vista
+/// previa / impresión / guardado, que en cada plataforma ofrece además la
+/// opción nativa de "Compartir".
 abstract final class PdfExportService {
+  /// Guinda institucional del IPN para el encabezado de la tabla.
+  static const PdfColor _guinda = PdfColor.fromInt(0xFF691B31);
+
   static Future<void> exportarYCompartir({
     required List<Examen> examenes,
     String titulo = 'Calendario de Exámenes a Título de Suficiencia',
@@ -74,7 +77,7 @@ abstract final class PdfExportService {
               ])
           .toList(),
       headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white),
-      headerDecoration: const pw.BoxDecoration(color: PdfColors.deepPurple),
+      headerDecoration: const pw.BoxDecoration(color: _guinda),
       cellStyle: const pw.TextStyle(fontSize: 9),
       cellAlignment: pw.Alignment.centerLeft,
       cellPadding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 6),
