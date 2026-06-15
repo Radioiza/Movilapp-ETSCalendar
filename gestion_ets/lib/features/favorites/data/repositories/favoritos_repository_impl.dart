@@ -39,4 +39,13 @@ class FavoritosRepositoryImpl implements FavoritosRepository {
       throw mapearAFailure(error);
     }
   }
+
+  @override
+  Future<void> limpiar() async {
+    try {
+      await _local.limpiar();
+    } on Exception catch (error) {
+      throw mapearAFailure(error);
+    }
+  }
 }

@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:add_2_calendar/add_2_calendar.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -10,13 +9,11 @@ import '../../exams/domain/entities/examen.dart';
 /// Servicio de **exportación a formato .ics (iCalendar)** — los puntos extra
 /// del requerimiento "Exportación" del Módulo Público.
 ///
-/// Ofrece dos vías:
-/// - [exportarComoArchivo]: genera un archivo **.ics** estándar (RFC 5545) con
-///   los exámenes y abre la hoja de compartir. No depende de que el
-///   dispositivo tenga una app de calendario; el archivo es importable en
-///   Google Calendar, Outlook, Apple Calendar, etc.
-/// - [agregarAlCalendario]: integración nativa con la app de calendario del
-///   dispositivo para un examen puntual (vía `add_2_calendar`).
+/// [exportarComoArchivo] genera un archivo **.ics** estándar (RFC 5545) con los
+/// exámenes y abre la hoja de compartir. No depende de que el dispositivo tenga
+/// una app de calendario; el archivo es importable en Google Calendar, Outlook,
+/// Apple Calendar, etc. (Para escribir/eliminar eventos directamente en el
+/// calendario del teléfono, ver `CalendarioTelefonoService`.)
 abstract final class IcsExportService {
   static const Duration _duracionExamen = Duration(hours: 2);
 
@@ -33,11 +30,6 @@ abstract final class IcsExportService {
       text: 'Calendario de Exámenes a Título de Suficiencia '
           '(${examenes.length} examen(es))',
     );
-  }
-
-  /// Agrega un único examen al calendario nativo del dispositivo.
-  static Future<bool> agregarAlCalendario(Examen examen) {
-    return Add2Calendar.addEvent2Cal(_eventoDesde(examen));
   }
 
   /// Construye el documento iCalendar (RFC 5545) con un `VEVENT` por examen.
@@ -94,20 +86,5 @@ abstract final class IcsExportService {
         .replaceAll(';', '\\;')
         .replaceAll(',', '\\,')
         .replaceAll('\n', '\\n');
-  }
-
-  static Event _eventoDesde(Examen examen) {
-    return Event(
-      title: 'ETS · ${examen.unidadAprendizaje}',
-      description: 'Examen a Título de Suficiencia\n'
-          'Carrera: ${examen.carreraNombre} (${examen.semestre}.º semestre)\n'
-          'Turno: ${examen.turno.etiqueta}\n'
-          'Profesor evaluador: ${examen.profesorEvaluador}',
-      location: examen.salonNombre,
-      startDate: examen.fecha,
-      endDate: examen.fecha.add(_duracionExamen),
-      iosParams: const IOSParams(reminder: Duration(hours: 24)),
-      androidParams: const AndroidParams(emailInvites: <String>[]),
-    );
   }
 }

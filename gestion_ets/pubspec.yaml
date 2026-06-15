@@ -47,7 +47,9 @@ dependencies:
   # Exportación de calendario
   pdf: ^3.11.1
   printing: ^5.13.4
-  add_2_calendar: ^3.0.1
+  # Lectura/escritura del calendario nativo del teléfono (agregar y BORRAR
+  # eventos de ETS de forma programática, con su eventId para poder eliminarlos).
+  device_calendar: ^4.3.3
   # Generación y compartición del archivo .ics (iCalendar) — puntos extra
   share_plus: ^10.1.4
   path_provider: ^2.1.5

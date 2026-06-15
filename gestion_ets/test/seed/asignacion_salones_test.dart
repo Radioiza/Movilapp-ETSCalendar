@@ -94,6 +94,15 @@ void main() {
     );
   });
 
+  test('no se generan ETS de Estancia Profesional ni de semestres > 8', () {
+    for (final ExamenModel e in examenes) {
+      expect(e.unidadAprendizaje, isNot('Estancia Profesional'),
+          reason: 'Estancia Profesional no debe tener ETS');
+      expect(e.semestre, lessThanOrEqualTo(8),
+          reason: '${e.unidadAprendizaje} cae en un semestre fuera de rango: ${e.semestre}');
+    }
+  });
+
   test('las aulas generales no usan los espacios de los laboratorios', () {
     // Ninguna aula general debe tener el número de un laboratorio.
     final Iterable<String> idsGenerales = DatosSemillaEscom.salonesPorArea[AreaEts.general]!

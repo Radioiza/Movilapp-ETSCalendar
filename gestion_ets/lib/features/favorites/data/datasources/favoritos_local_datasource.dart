@@ -28,4 +28,12 @@ class FavoritosLocalDataSource {
       throw const CacheException('No fue posible guardar tus exámenes favoritos');
     }
   }
+
+  Future<void> limpiar() async {
+    try {
+      await _prefs.remove(_llaveFavoritos);
+    } on Exception {
+      throw const CacheException('No fue posible limpiar tus exámenes guardados');
+    }
+  }
 }

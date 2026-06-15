@@ -4,10 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/error/failures.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/utils/launcher_helper.dart';
+import '../../../../core/di/injection_container.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/loading_view.dart';
 import '../../../agenda/presentation/providers/agenda_provider.dart';
-import '../../../export/domain/ics_export_service.dart';
+import '../../../export/domain/calendario_telefono_service.dart';
 import '../../../export/domain/pdf_export_service.dart';
 import '../../../favorites/presentation/providers/favoritos_provider.dart';
 import '../../../notifications/presentation/providers/notificacion_provider.dart';
@@ -196,23 +197,32 @@ class _Contenido extends ConsumerWidget {
 
     await ref.read(favoritosExamenesProvider.notifier).alternar(examen.id);
 
-    bool telefonoOk;
+    ResultadoCalendario telefono;
     try {
-      telefonoOk = await IcsExportService.agregarAlCalendario(examen);
+      telefono = await sl<CalendarioTelefonoService>().agregar(examen);
     } on Exception {
-      telefonoOk = false;
+      telefono = ResultadoCalendario.error;
     }
     if (!context.mounted) {
       return;
     }
+    final String mensaje;
+    switch (telefono) {
+      case ResultadoCalendario.ok:
+        mensaje = 'Agregado a tu calendario y al del teléfono';
+      case ResultadoCalendario.sinPermiso:
+        mensaje = 'Agregado a la app. Concede el permiso de Calendario para '
+            'guardarlo también en el teléfono.';
+      case ResultadoCalendario.sinCalendario:
+        mensaje = 'Agregado a la app. No se encontró un calendario en el teléfono '
+            'donde escribir; usa “PDF” o el “.ics”.';
+      case ResultadoCalendario.error:
+        mensaje = 'Agregado a la app. No se pudo escribir en el calendario del '
+            'teléfono; usa “PDF” o el “.ics”.';
+    }
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
-      ..showSnackBar(SnackBar(
-        content: Text(telefonoOk
-            ? 'Agregado a tu calendario y al del teléfono'
-            : 'Agregado a tu calendario. No se encontró una app de calendario en el '
-                'teléfono; usa “PDF” o el “.ics” para llevarlo.'),
-      ));
+      ..showSnackBar(SnackBar(content: Text(mensaje)));
   }
 
   /// Diálogo que enumera los conflictos detectados (traslapes y/o misma
@@ -268,12 +278,17 @@ class _Contenido extends ConsumerWidget {
 
   Future<void> _quitarDelCalendario(BuildContext context, WidgetRef ref) async {
     await ref.read(favoritosExamenesProvider.notifier).alternar(examen.id);
+    try {
+      await sl<CalendarioTelefonoService>().quitar(examen.id);
+    } on Exception {
+      // Si no se pudo borrar del teléfono, igual se quitó de la app.
+    }
     if (!context.mounted) {
       return;
     }
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
-      ..showSnackBar(const SnackBar(content: Text('Quitado de tu calendario')));
+      ..showSnackBar(const SnackBar(content: Text('Quitado de tu calendario y del teléfono')));
   }
 
   Future<void> _activarRecordatorio(BuildContext context, WidgetRef ref) async {

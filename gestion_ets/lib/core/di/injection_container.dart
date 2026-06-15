@@ -19,6 +19,8 @@ import '../../features/favorites/data/datasources/favoritos_local_datasource.dar
 import '../../features/favorites/data/repositories/favoritos_repository_impl.dart';
 import '../../features/favorites/domain/repositories/favoritos_repository.dart';
 import '../../features/favorites/domain/usecases/alternar_favorito_usecase.dart';
+import '../../features/favorites/domain/usecases/limpiar_favoritos_usecase.dart';
+import '../../features/export/domain/calendario_telefono_service.dart';
 import '../../features/notifications/domain/notificacion_service.dart';
 import '../local/app_database.dart';
 import '../local/seed/sembrador_datos.dart';
@@ -71,6 +73,10 @@ Future<void> inicializarDependencias() async {
   sl.registerLazySingleton<FavoritosLocalDataSource>(() => FavoritosLocalDataSource(sl()));
   sl.registerLazySingleton<FavoritosRepository>(() => FavoritosRepositoryImpl(sl()));
   sl.registerLazySingleton<AlternarFavoritoUseCase>(() => AlternarFavoritoUseCase(sl()));
+  sl.registerLazySingleton<LimpiarFavoritosUseCase>(() => LimpiarFavoritosUseCase(sl()));
+  sl.registerLazySingleton<CalendarioTelefonoService>(
+    () => CalendarioTelefonoService(sl<SharedPreferences>()),
+  );
 
   // --- Siembra de datos (modo demo offline con datos reales de ESCOM) ---
   // Puebla sqflite una sola vez con carreras, salones, exámenes (planes de

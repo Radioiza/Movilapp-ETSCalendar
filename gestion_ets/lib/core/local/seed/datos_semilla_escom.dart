@@ -434,7 +434,6 @@ abstract final class DatosSemillaEscom {
         'Administración de Servicios en Red',
       ],
       8: <String>[
-        'Estancia Profesional',
         'Desarrollo de Habilidades Sociales para la Alta Dirección',
         'Gestión Empresarial',
         'Liderazgo Personal',
@@ -497,7 +496,6 @@ abstract final class DatosSemillaEscom {
       ],
       8: <String>[
         'Gestión Empresarial',
-        'Estancia Profesional',
         'Desarrollo de Habilidades Sociales para la Alta Dirección',
       ],
     },
@@ -558,7 +556,6 @@ abstract final class DatosSemillaEscom {
       8: <String>[
         'Desarrollo de Habilidades Sociales para la Alta Dirección',
         'Gestión Empresarial',
-        'Estancia Profesional',
       ],
     },
   };

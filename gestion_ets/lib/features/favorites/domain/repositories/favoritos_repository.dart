@@ -9,4 +9,7 @@ abstract interface class FavoritosRepository {
   Future<void> alternar(String examenId);
 
   Future<bool> esFavorito(String examenId);
+
+  /// Elimina **todos** los exámenes guardados (vacía el calendario del alumno).
+  Future<void> limpiar();
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/di/injection_container.dart';
 import '../../../../core/error/failures.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/widgets/error_view.dart';
@@ -8,7 +9,9 @@ import '../../../../core/widgets/loading_view.dart';
 import '../../../exams/domain/entities/examen.dart';
 import '../../../exams/presentation/screens/examen_detalle_screen.dart';
 import '../../../exams/presentation/widgets/lista_resultados_examenes.dart';
+import '../../../export/domain/calendario_telefono_service.dart';
 import '../../../export/domain/ics_export_service.dart';
+import '../../../favorites/presentation/providers/favoritos_provider.dart';
 import '../../../export/domain/pdf_export_service.dart';
 import '../providers/agenda_provider.dart';
 import '../widgets/calendario_mensual.dart';
@@ -46,10 +49,17 @@ class _AgendaScreenState extends ConsumerState<AgendaScreen> {
           : rango.primerMes;
     }
 
+    final bool hayExamenes = examenesAsync.valueOrNull?.isNotEmpty ?? false;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mi Calendario'),
         actions: <Widget>[
+          IconButton(
+            tooltip: 'Limpiar mi calendario',
+            icon: const Icon(Icons.delete_sweep_outlined),
+            onPressed: hayExamenes ? _confirmarLimpiar : null,
+          ),
           PopupMenuButton<_ExportarAgenda>(
             tooltip: 'Exportar mis ETS',
             icon: const Icon(Icons.ios_share_rounded),
@@ -212,6 +222,55 @@ class _AgendaScreenState extends ConsumerState<AgendaScreen> {
       }
     } on Exception {
       _avisar('No fue posible exportar tu calendario');
+    }
+  }
+
+  /// Pide confirmación y, si el alumno acepta, vacía su calendario.
+  Future<void> _confirmarLimpiar() async {
+    final int total =
+        ref.read(examenesEnCalendarioProvider).valueOrNull?.length ?? 0;
+    if (total == 0) {
+      return;
+    }
+    final bool? confirmar = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext ctx) => AlertDialog(
+        icon: const Icon(Icons.delete_sweep_outlined),
+        title: const Text('Vaciar mi calendario'),
+        content: Text(
+          'Se quitarán los $total ETS que agregaste, también del calendario de tu '
+          'teléfono. Esto no los borra de la oferta oficial.',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Vaciar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmar ?? false) {
+      await _limpiar();
+    }
+  }
+
+  Future<void> _limpiar() async {
+    try {
+      // Primero borra los eventos del teléfono (usa las referencias guardadas)
+      // y luego vacía el calendario in-app.
+      try {
+        await sl<CalendarioTelefonoService>().limpiarTodo();
+      } on Exception {
+        // Si falla el borrado en el teléfono, igual se vacía la app.
+      }
+      await ref.read(favoritosExamenesProvider.notifier).limpiar();
+      _avisar('Tu calendario quedó vacío');
+    } on Exception {
+      _avisar('No fue posible limpiar tu calendario');
     }
   }
 

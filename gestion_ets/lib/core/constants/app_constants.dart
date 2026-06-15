@@ -37,7 +37,7 @@ class AppConstants {
   // Al cambiar la versión se vuelve a sembrar la base local con los datos de
   // ESCOM (planes de estudio 2020). Credenciales del administrador local para
   // demostrar el Módulo Administrativo sin backend.
-  static const String versionSemilla = 'escom-2020-v10';
+  static const String versionSemilla = 'escom-2020-v11';
   static const String adminDemoUsuario = 'admin';
   static const String adminDemoContrasena = 'admin123';
 
@@ -50,7 +50,7 @@ class AppConstants {
 
   // --- Catálogos fijos del dominio ---
   static const List<String> turnos = <String>['Matutino', 'Vespertino'];
-  static const List<int> semestres = <int>[1, 2, 3, 4, 5, 6, 7, 8, 9];
+  static const List<int> semestres = <int>[1, 2, 3, 4, 5, 6, 7, 8];
 
   // --- Soporte ---
   static const String correoSoporte = 'soporte.ets@escom.ipn.mx';

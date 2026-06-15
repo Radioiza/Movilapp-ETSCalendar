@@ -3,6 +3,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../domain/repositories/favoritos_repository.dart';
 import '../../domain/usecases/alternar_favorito_usecase.dart';
+import '../../domain/usecases/limpiar_favoritos_usecase.dart';
 
 part 'favoritos_provider.g.dart';
 
@@ -15,6 +16,7 @@ part 'favoritos_provider.g.dart';
 class FavoritosExamenes extends _$FavoritosExamenes {
   FavoritosRepository get _repositorio => sl<FavoritosRepository>();
   AlternarFavoritoUseCase get _alternar => sl<AlternarFavoritoUseCase>();
+  LimpiarFavoritosUseCase get _limpiar => sl<LimpiarFavoritosUseCase>();
 
   @override
   FutureOr<Set<String>> build() => _repositorio.obtenerIds();
@@ -23,5 +25,12 @@ class FavoritosExamenes extends _$FavoritosExamenes {
     final AsyncValue<Set<String>> anterior = state;
     state = const AsyncValue<Set<String>>.loading().copyWithPrevious(anterior);
     state = await AsyncValue.guard(() => _alternar.ejecutar(examenId));
+  }
+
+  /// Vacía por completo el calendario del alumno (quita todos los ETS).
+  Future<void> limpiar() async {
+    final AsyncValue<Set<String>> anterior = state;
+    state = const AsyncValue<Set<String>>.loading().copyWithPrevious(anterior);
+    state = await AsyncValue.guard(() => _limpiar.ejecutar());
   }
 }
