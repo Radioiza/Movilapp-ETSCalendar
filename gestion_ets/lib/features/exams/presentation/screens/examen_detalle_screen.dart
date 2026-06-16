@@ -9,16 +9,16 @@ import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/loading_view.dart';
 import '../../../agenda/presentation/providers/agenda_provider.dart';
 import '../../../export/domain/calendario_telefono_service.dart';
-import '../../../export/domain/pdf_export_service.dart';
 import '../../../favorites/presentation/providers/favoritos_provider.dart';
 import '../../../notifications/presentation/providers/notificacion_provider.dart';
 import '../../domain/entities/examen.dart';
 import '../providers/examen_search_provider.dart';
 
-/// Detalle de un examen: información completa, accesos directos a
-/// **interoperabilidad** (ubicación del salón / contacto con soporte vía
-/// `url_launcher`), **notificaciones locales** (recordatorio) y
-/// **exportación** individual (PDF / .ics), además de favoritos.
+/// Detalle de un examen: información completa y acciones. **Agregar a
+/// calendario y recordarme** lo guarda en *mi calendario* (app), lo escribe en
+/// el **calendario del teléfono** y programa la **notificación local** un día
+/// antes; si hay traslape o ya está esa materia, ofrece *cambiar* en vez de
+/// duplicar. Incluye **contacto con soporte** (`url_launcher`).
 class ExamenDetalleScreen extends ConsumerWidget {
   const ExamenDetalleScreen({super.key, required this.examenId});
 
@@ -130,18 +130,8 @@ class _Contenido extends ConsumerWidget {
               FilledButton.icon(
                 onPressed: () => _agregarAlCalendario(context, ref),
                 icon: const Icon(Icons.event_available_outlined),
-                label: const Text('Agregar a calendario'),
+                label: const Text('Agregar a calendario y recordarme'),
               ),
-            FilledButton.tonalIcon(
-              onPressed: () => _activarRecordatorio(context, ref),
-              icon: const Icon(Icons.notifications_active_outlined),
-              label: const Text('Recordarme'),
-            ),
-            OutlinedButton.icon(
-              onPressed: () => PdfExportService.exportarYCompartir(examenes: <Examen>[examen]),
-              icon: const Icon(Icons.picture_as_pdf_outlined),
-              label: const Text('PDF'),
-            ),
             TextButton.icon(
               onPressed: () => LauncherHelper.enviarCorreoSoporte(
                 asunto: 'Duda sobre mi ETS de ${examen.unidadAprendizaje}',
@@ -159,10 +149,10 @@ class _Contenido extends ConsumerWidget {
   /// el calendario del alumno (coincide con la usada al exportar a .ics).
   static const Duration _duracionExamen = Duration(hours: 2);
 
-  /// Agrega el examen a **mi calendario** (la app) y, además, lo manda al
-  /// **calendario del teléfono**. Antes de agregar, avisa si el ETS **se
-  /// traslapa** con otro que el alumno ya tenga o si **ya agregó esa misma
-  /// materia** en otro horario, dándole la opción de continuar o cancelar.
+  /// Agrega el examen a **mi calendario** (app) + **calendario del teléfono** y
+  /// programa el **recordatorio**. Si el ETS **se traslapa** con otro o si **ya
+  /// está esa misma materia** en otro horario, ofrece *cambiar* (reemplazar el
+  /// que estorba por este) en vez de duplicar.
   Future<void> _agregarAlCalendario(BuildContext context, WidgetRef ref) async {
     final List<Examen> agregados =
         await ref.read(examenesEnCalendarioProvider.future);
@@ -189,9 +179,18 @@ class _Contenido extends ConsumerWidget {
       return;
     }
     if (traslapes.isNotEmpty || mismaMateria.isNotEmpty) {
-      final bool continuar = await _confirmarConflicto(context, traslapes, mismaMateria);
-      if (!continuar || !context.mounted) {
+      final bool cambiar = await _confirmarConflicto(context, traslapes, mismaMateria);
+      if (!cambiar || !context.mounted) {
         return;
+      }
+      // "Cambiar": quita los ETS en conflicto (de ambos calendarios y del
+      // recordatorio) antes de agregar este.
+      final Map<String, Examen> aReemplazar = <String, Examen>{};
+      for (final Examen e in <Examen>[...traslapes, ...mismaMateria]) {
+        aReemplazar[e.id] = e;
+      }
+      for (final Examen e in aReemplazar.values) {
+        await _quitarUno(ref, e);
       }
     }
 
@@ -203,30 +202,44 @@ class _Contenido extends ConsumerWidget {
     } on Exception {
       telefono = ResultadoCalendario.error;
     }
+
+    bool recordatorioOk;
+    try {
+      recordatorioOk = await ref.read(recordatorioExamenProvider.notifier).activar(examen);
+    } on Exception {
+      recordatorioOk = false;
+    }
+
     if (!context.mounted) {
       return;
     }
-    final String mensaje;
-    switch (telefono) {
-      case ResultadoCalendario.ok:
-        mensaje = 'Agregado a tu calendario y al del teléfono';
-      case ResultadoCalendario.sinPermiso:
-        mensaje = 'Agregado a la app. Concede el permiso de Calendario para '
-            'guardarlo también en el teléfono.';
-      case ResultadoCalendario.sinCalendario:
-        mensaje = 'Agregado a la app. No se encontró un calendario en el teléfono '
-            'donde escribir; usa “PDF” o el “.ics”.';
-      case ResultadoCalendario.error:
-        mensaje = 'Agregado a la app. No se pudo escribir en el calendario del '
-            'teléfono; usa “PDF” o el “.ics”.';
-    }
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
-      ..showSnackBar(SnackBar(content: Text(mensaje)));
+      ..showSnackBar(SnackBar(content: Text(_mensajeAgregado(telefono, recordatorioOk))));
   }
 
-  /// Diálogo que enumera los conflictos detectados (traslapes y/o misma
-  /// materia) y deja al alumno decidir si agrega el ETS de todos modos.
+  /// Mensaje de confirmación tras agregar: avisa que se guardó en los
+  /// calendarios y que se recordará un día antes (matizando si el teléfono falló).
+  String _mensajeAgregado(ResultadoCalendario telefono, bool recordatorioOk) {
+    final String rec = recordatorioOk ? ' y te recordaremos un día antes del examen' : '';
+    switch (telefono) {
+      case ResultadoCalendario.ok:
+        return 'Se añadió a tu calendario y al del teléfono$rec.';
+      case ResultadoCalendario.sinPermiso:
+        return 'Se añadió a tu calendario$rec. Concede el permiso de Calendario '
+            'para guardarlo también en el teléfono.';
+      case ResultadoCalendario.sinCalendario:
+        return 'Se añadió a tu calendario$rec. No se encontró un calendario en el '
+            'teléfono donde escribir.';
+      case ResultadoCalendario.error:
+        return 'Se añadió a tu calendario$rec. No se pudo escribir en el calendario '
+            'del teléfono.';
+    }
+  }
+
+  /// Diálogo de conflicto: en vez de "agregar de todos modos", ofrece
+  /// **Cancelar** o **Cambiar** (reemplazar el ETS en conflicto por este). La
+  /// etiqueta del botón cambia según el tipo de conflicto.
   Future<bool> _confirmarConflicto(
     BuildContext context,
     List<Examen> traslapes,
@@ -253,7 +266,18 @@ class _Contenido extends ConsumerWidget {
       }
     }
 
-    final bool? continuar = await showDialog<bool>(
+    // Misma materia (otro horario) → "Cambiar por este horario".
+    // ETS distinto a la misma hora → "Cambiar «X» por este".
+    final String etiquetaCambiar;
+    if (traslapes.isNotEmpty) {
+      etiquetaCambiar = traslapes.length == 1
+          ? 'Cambiar «${traslapes.first.unidadAprendizaje}» por este'
+          : 'Reemplazar los exámenes en conflicto';
+    } else {
+      etiquetaCambiar = 'Cambiar por este horario';
+    }
+
+    final bool? cambiar = await showDialog<bool>(
       context: context,
       builder: (BuildContext ctx) => AlertDialog(
         icon: const Icon(Icons.warning_amber_rounded),
@@ -268,40 +292,39 @@ class _Contenido extends ConsumerWidget {
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Agregar de todos modos'),
+            child: Text(etiquetaCambiar),
           ),
         ],
       ),
     );
-    return continuar ?? false;
+    return cambiar ?? false;
   }
 
   Future<void> _quitarDelCalendario(BuildContext context, WidgetRef ref) async {
-    await ref.read(favoritosExamenesProvider.notifier).alternar(examen.id);
+    await _quitarUno(ref, examen);
+    if (!context.mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(const SnackBar(
+        content: Text('Quitado de tus calendarios y cancelamos el recordatorio'),
+      ));
+  }
+
+  /// Quita un ETS de *mi calendario* (app), del calendario del teléfono y
+  /// cancela su recordatorio. Reutilizado al quitar y al "cambiar".
+  Future<void> _quitarUno(WidgetRef ref, Examen e) async {
+    await ref.read(favoritosExamenesProvider.notifier).alternar(e.id);
     try {
-      await sl<CalendarioTelefonoService>().quitar(examen.id);
+      await sl<CalendarioTelefonoService>().quitar(e.id);
     } on Exception {
       // Si no se pudo borrar del teléfono, igual se quitó de la app.
     }
-    if (!context.mounted) {
-      return;
+    try {
+      await ref.read(recordatorioExamenProvider.notifier).cancelar(e);
+    } on Exception {
+      // El recordatorio pudo no existir; se ignora.
     }
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(const SnackBar(content: Text('Quitado de tu calendario y del teléfono')));
-  }
-
-  Future<void> _activarRecordatorio(BuildContext context, WidgetRef ref) async {
-    final bool exito = await ref.read(recordatorioExamenProvider.notifier).activar(examen);
-    if (!context.mounted) {
-      return;
-    }
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(SnackBar(
-        content: Text(exito
-            ? 'Te avisaremos un día antes de tu examen'
-            : 'No fue posible programar el recordatorio'),
-      ));
   }
 }

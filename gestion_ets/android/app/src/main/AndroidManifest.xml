@@ -3,6 +3,15 @@
          de forma programática con `device_calendar`). -->
     <uses-permission android:name="android.permission.READ_CALENDAR"/>
     <uses-permission android:name="android.permission.WRITE_CALENDAR"/>
+    <!-- Notificaciones locales (recordatorio del ETS). En Android 13+ hay que
+         pedir POST_NOTIFICATIONS, y para que el recordatorio dispare a la hora
+         exacta se requiere una de las alarmas exactas. USE_EXACT_ALARM se
+         concede sola en apps cuya función central es recordar (Android 13+);
+         SCHEDULE_EXACT_ALARM cubre Android 12. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <application
         android:label="gestion_ets"
         android:name="${applicationName}"

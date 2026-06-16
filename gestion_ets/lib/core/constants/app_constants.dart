@@ -37,7 +37,7 @@ class AppConstants {
   // Al cambiar la versión se vuelve a sembrar la base local con los datos de
   // ESCOM (planes de estudio 2020). Credenciales del administrador local para
   // demostrar el Módulo Administrativo sin backend.
-  static const String versionSemilla = 'escom-2020-v11';
+  static const String versionSemilla = 'escom-2020-v12';
   static const String adminDemoUsuario = 'admin';
   static const String adminDemoContrasena = 'admin123';
 

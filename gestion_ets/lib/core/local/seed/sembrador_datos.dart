@@ -46,12 +46,43 @@ class SembradorDatos {
 
     await _catalogoLocal.reemplazarCarreras(DatosSemillaEscom.carreras);
     await _catalogoLocal.reemplazarSalones(DatosSemillaEscom.salones);
-    await _examenLocal.reemplazarTodo(generarExamenes());
+    // La oferta real (jul 6–10) más un ETS de prueba para mañana, útil para
+    // demostrar el recordatorio: su aviso (24 h antes) cae unos minutos después
+    // de instalar. Va aquí y no en `generarExamenes()` para no afectar las
+    // pruebas, que validan la semana oficial.
+    final List<ExamenModel> examenes = <ExamenModel>[
+      ...generarExamenes(),
+      _examenDePruebaRecordatorio(),
+    ];
+    await _examenLocal.reemplazarTodo(examenes);
     await _sembrarAdministradorLocal();
 
     await _prefs.setString(
       AppConstants.prefVersionSemilla,
       AppConstants.versionSemilla,
+    );
+  }
+
+  /// ETS de prueba para **demostrar el recordatorio**. Su fecha es mañana, a
+  /// unos minutos por encima de la hora actual, de modo que el aviso (que se
+  /// programa 24 h antes) caiga ~4 min después de instalar y se pueda ver la
+  /// notificación durante la revisión. Es fácil de identificar y se puede
+  /// borrar desde el módulo administrativo.
+  ExamenModel _examenDePruebaRecordatorio() {
+    final DateTime objetivo = DateTime.now().add(const Duration(hours: 24, minutes: 4));
+    final DateTime fecha =
+        DateTime(objetivo.year, objetivo.month, objetivo.day, objetivo.hour, objetivo.minute);
+    return ExamenModel(
+      id: 'prueba-recordatorio',
+      unidadAprendizaje: 'ETS de prueba (recordatorio)',
+      carreraId: 'isc',
+      carreraNombre: 'Ingeniería en Sistemas Computacionales',
+      semestre: 1,
+      fecha: fecha,
+      turno: fecha.hour < 13 ? Turno.matutino : Turno.vespertino,
+      salonId: 's-1002',
+      salonNombre: 'Edificio 1 · Salón 002',
+      profesorEvaluador: 'Demostración de recordatorio',
     );
   }
 
